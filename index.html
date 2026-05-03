@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperDeck Remote Control</title>
+	<link rel="icon" href="icon.ico" type="image/x-icon">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts: Inter for general text, Montserrat for buttons as per CodePen -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base styles from CodePen for the body */
+        body {
+            font-family: 'Inter', sans-serif; /* Keep Inter for general body text */
+            margin: 0;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%); /* Dark gradient from CodePen */
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            color: #ffffff; /* Default text color for the entire body */
+            flex-direction: column; /* Allow content to stack vertically */
+        }
+
+        /* Card Container - Modified to blend with the new theme, less distinct separation */
+        .card-container {
+            background-color: rgba(44, 44, 44, 0.5); /* Semi-transparent background */
+            border-radius: 1rem; /* Slightly less rounded than before for a sharper feel */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4); /* Softer shadow */
+            padding: 2.5rem;
+            max-width: 90%;
+            width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.08); /* Subtle light border */
+            margin-bottom: 2rem; /* Space between card and footer */
+            display: flex; /* Make it a flex container */
+            flex-direction: column; /* Stack children vertically */
+            align-items: center; /* Center children horizontally by default */
+        }
+
+        /* Input Field - Base style for glowing effect and rounded edges */
+        .input-field {
+            @apply w-full p-3 rounded-full; /* Apply rounded-full here for all inputs using this class */
+            border: 1px solid rgba(0, 0, 0, 0.2); /* Light border for white background */
+            transition: border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0); /* Initial subtle glow */
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #007bff; /* Blue glow on focus for white background */
+            box-shadow: 0 0 10px #007bff, 0 0 20px rgba(0, 123, 255, 0.3); /* More intense glow */
+        }
+
+        /* Status Message - Retaining previous styling but adjusting colors slightly */
+        .status-message {
+            @apply mt-6 p-4 rounded-xl text-sm font-medium transition-opacity duration-300;
+            opacity: 0;
+            visibility: hidden;
+            max-height: 0;
+            overflow: hidden;
+        }
+        .status-message.show {
+            opacity: 1;
+            visibility: visible;
+            max-height: 100px;
+            padding: 1rem;
+        }
+        .status-info { @apply bg-blue-700 text-white; }
+        .status-success { @apply bg-green-700 text-white; }
+        .status-error { @apply bg-red-700 text-white; }
+
+        /* Button Styles adapted from CodePen - keeping the electric glow with rounded edges */
+        .electric-button {
+            font-family: 'Montserrat', sans-serif; /* Use Montserrat for buttons */
+            @apply text-white font-bold py-3.5 px-7 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-md focus:outline-none focus:ring-4 focus:ring-opacity-75;
+            border: 1px solid; /* Defined per color variant below */
+            background: transparent;
+            text-shadow: 0 0 5px currentColor; /* Glow effect for text */
+            box-shadow: 0 0 5px currentColor; /* Base glow for button */
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .electric-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1); /* Default glow color for pseudo-element */
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.3s ease-in-out;
+            z-index: -1;
+        }
+
+        .electric-button:hover::before {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+
+        /* Specific color variants for the electric buttons */
+        .electric-button.red {
+            border-color: #ff0000;
+            color: #ff0000;
+            box-shadow: 0 0 5px #ff0000;
+            text-shadow: 0 0 5px #ff0000;
+            @apply focus:ring-red-500;
+        }
+        .electric-button.red::before {
+            background: rgba(255, 0, 0, 0.1);
+        }
+
+        .electric-button.green {
+            border-color: #00ff00;
+            color: #00ff00;
+            box-shadow: 0 0 5px #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+            @apply focus:ring-green-500;
+        }
+        .electric-button.green::before {
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        .electric-button.blue { /* New Blue variant for SDI input */
+            border-color: #007bff;
+            color: #007bff;
+            box-shadow: 0 0 5px #007bff;
+            text-shadow: 0 0 5px #007bff;
+            @apply focus:ring-blue-500;
+        }
+        .electric-button.blue::before {
+            background: rgba(0, 123, 255, 0.1);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .card-container {
+                padding: 1.5rem;
+                border-radius: 1rem;
+            }
+            .electric-button {
+                padding: 0.875rem 1.25rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Connection Status Indicator Styles */
+        .connection-status-wrapper {
+            width: 100%; /* Ensure it takes full width */
+            text-align: right; /* Align content to the right */
+            margin-bottom: 1.5rem; /* Equivalent to Tailwind mb-6 */
+        }
+        .connection-status {
+            display: inline-flex; /* Treat as inline-flex to be affected by text-align on parent */
+            align-items: center;
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 500; /* font-medium */
+            color: #d1d5db; /* text-gray-300 */
+        }
+        .status-dot {
+            @apply w-3 h-3 rounded-full mr-2;
+        }
+        .status-dot.disconnected { background-color: #ef4444; /* Red */ }
+        .status-dot.connecting { background-color: #f59e0b; /* Amber */ }
+        .status-dot.connected { background-color: #22c55e; /* Green */ }
+    </style>
+</head>
+<body>
+    <div class="card-container">
+        <h1 class="text-4xl font-extrabold text-white mb-6 text-center tracking-tight">
+            HyperDeck <span class="text-cyan-400">Control</span>
+        </h1>
+
+        <!-- Connection Status Indicator -->
+        <div class="connection-status-wrapper">
+            <div class="connection-status">
+                <span id="connectionDot" class="status-dot disconnected"></span>
+                <span id="connectionText">Disconnected</span>
+            </div>
+        </div>
+
+        <div class="mb-6 w-full">
+            <label for="hyperdeckIp" class="block text-gray-300 text-sm font-semibold mb-2">HyperDeck IP Address:</label>
+            <input type="text" id="hyperdeckIp" class="input-field bg-white text-gray-900">
+        </div>
+
+        <div class="mb-8 w-full">
+            <label for="clipName" class="block text-gray-300 text-sm font-semibold mb-2">Clip Name (Optional):</label>
+            <input type="text" id="clipName" class="input-field bg-white text-gray-600 placeholder-gray-400" placeholder="e.g., My Awesome Clip">
+        </div>
+
+        <!-- Input Status Display -->
+        <div class="w-full bg-gray-700 bg-opacity-30 rounded-xl p-4 mb-6">
+            <h2 class="text-lg font-bold text-gray-200 mb-2">Current Input Status:</h2>
+            <p class="text-gray-300 text-sm mb-1">Source: <span id="currentInputSource" class="font-semibold text-white">N/A</span></p>
+            <p class="text-gray-300 text-sm">Format: <span id="currentInputFormat" class="font-semibold text-white">N/A</span></p>
+        </div>
+
+
+        <!-- Connect and Disconnect Buttons -->
+        <div class="flex justify-center gap-4 mb-6 w-full">
+            <button id="connectBtn" class="electric-button blue flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1 -mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 11a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                Connect
+            </button>
+            <button id="disconnectBtn" class="electric-button red flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1 -mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+                Disconnect
+            </button>
+        </div>
+
+
+        <div class="flex justify-center mb-6 w-full">
+            <button id="sdiInputBtn" class="electric-button blue w-full max-w-xs md:max-w-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2 -mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM5 7h10v8H5V7z" clip-rule="evenodd" />
+                </svg>
+                Set SDI Input
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 w-full">
+            <button id="recordBtn" class="electric-button green">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2 -mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                </svg>
+                Record
+            </button>
+            <button id="stopBtn" class="electric-button red">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2 -mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd" />
+                </svg>
+                Stop
+            </button>
+        </div>
+
+        <div id="statusMessage" class="status-message hidden w-full">
+            <!-- Status messages -->
+        </div>
+    </div>
+
+    <!-- Footer with copyright -->
+    <footer class="text-center text-gray-500 text-sm mt-8 p-4">
+        &copy; <span id="currentYear"></span> Neomal Aberatne. All rights reserved.
+    </footer>
+
+    <script>
+        // DOM Elements
+        const hyperdeckIpInput = document.getElementById('hyperdeckIp');
+        const clipNameInput = document.getElementById('clipName');
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const sdiInputBtn = document.getElementById('sdiInputBtn');
+        const connectBtn = document.getElementById('connectBtn'); // Connect Button
+        const disconnectBtn = document.getElementById('disconnectBtn'); // Disconnect Button
+        const statusMessageDiv = document.getElementById('statusMessage');
+        const currentYearSpan = document.getElementById('currentYear');
+        const connectionDot = document.getElementById('connectionDot');
+        const connectionText = document.getElementById('connectionText');
+        // Input Status Display Elements
+        const currentInputSourceSpan = document.getElementById('currentInputSource');
+        const currentInputFormatSpan = document.getElementById('currentInputFormat');
+
+
+        // Set current year in footer
+        currentYearSpan.textContent = new Date().getFullYear();
+
+        // Key for localStorage
+        const LOCAL_STORAGE_KEY_IP = 'hyperdeckLastIp';
+
+        // Backend URL
+        const BACKEND_URL = 'http://localhost:5000/hyperdeck-command';
+
+        /**
+         * Updates the connection status indicator.
+         * @param {string} status - 'disconnected', 'connecting', or 'connected'.
+         * @param {string} message - The text message to display for the status.
+         */
+        function updateConnectionStatus(status, message) {
+            connectionDot.className = `status-dot ${status}`;
+            connectionText.textContent = message;
+        }
+
+        /**
+         * Displays a status message to the user with a fade-in/fade-out effect.
+         * @param {string} message - The message to display.
+         * @param {string} type - 'info', 'success', or 'error' to determine styling.
+         */
+        function showStatusMessage(message, type) {
+            statusMessageDiv.textContent = message;
+            statusMessageDiv.className = `status-message ${type}`;
+            void statusMessageDiv.offsetWidth; // Force reflow
+            statusMessageDiv.classList.add('show');
+
+            setTimeout(() => {
+                statusMessageDiv.classList.remove('show');
+                setTimeout(() => {
+                    statusMessageDiv.classList.add('hidden');
+                }, 300);
+            }, 5000);
+        }
+
+        /**
+         * Validates and cleans a string to be a valid Windows filename.
+         * Removes characters like \ / : * ? " < > | and now also full stops.
+         * @param {string} filename - The input string to clean.
+         * @returns {string} The cleaned filename.
+         */
+        function cleanFilename(filename) {
+            // Regex to match invalid Windows filename characters including full stop
+            const invalidCharsRegex = /[\\/:*?"<>|. ]/g; // Added '.' for full stop
+            return filename.replace(invalidCharsRegex, '');
+        }
+
+        // Event listener to clipNameInput for real-time validation
+        clipNameInput.addEventListener('input', (event) => {
+            const originalValue = event.target.value;
+            const cleanedValue = cleanFilename(originalValue);
+            if (originalValue !== cleanedValue) {
+                event.target.value = cleanedValue;
+                showStatusMessage('Invalid characters removed from clip name (e.g., \\ / : * ? " < > | .).', 'status-info');
+            }
+        });
+
+
+        /**
+         * Sends a command to the backend server.
+         * @param {string} command - The command string (e.g., 'record', 'stop', 'input: sdi').
+         * @param {boolean} isConnectionCheck - True if this command is specifically for connection status (e.g., 'ping').
+         */
+        async function sendHyperdeckCommand(command, isConnectionCheck = false) {
+            const hyperdeckIp = hyperdeckIpInput.value.trim();
+            if (!hyperdeckIp) {
+                showStatusMessage('Please enter the HyperDeck IP address.', 'status-error');
+                updateConnectionStatus('disconnected', 'No IP entered');
+                return;
+            }
+
+            // Only show "Connecting..." if it's explicitly a connection check or first command
+            if (isConnectionCheck) {
+                showStatusMessage(`Attempting to connect to HyperDeck at ${hyperdeckIp}...`, 'status-info');
+                updateConnectionStatus('connecting', 'Connecting...');
+                // Reset input status display on new connection attempt
+                currentInputSourceSpan.textContent = 'N/A';
+                currentInputFormatSpan.textContent = 'N/A';
+            } else {
+                showStatusMessage(`Sending command '${command}' to HyperDeck...`, 'status-info');
+            }
+
+
+            try {
+                const response = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ ip: hyperdeckIp, command: command }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    const errorMessage = `HTTP error! Status: ${response.status}. Message: ${errorData.message || 'Unknown error.'}`;
+                    showStatusMessage(`Command failed: ${errorMessage}`, 'status-error');
+                    updateConnectionStatus('disconnected', 'Connection Error');
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    showStatusMessage(`Command successful! HyperDeck response: ${data.hyperdeck_response}`, 'status-success');
+                    // Check if the backend reported an error from HyperDeck
+                    if (data.hyperdeck_response && (data.hyperdeck_response.startsWith("201 error:") || data.hyperdeck_response.startsWith("150 "))) {
+                        updateConnectionStatus('disconnected', 'HyperDeck Error');
+                    } else {
+                         updateConnectionStatus('connected', 'Connected');
+                         // Update input status if provided in the response
+                         if (data.inputSource) {
+                             currentInputSourceSpan.textContent = data.inputSource;
+                         }
+                         if (data.inputFormat) {
+                             currentInputFormatSpan.textContent = data.inputFormat;
+                         }
+                    }
+                } else {
+                    // Errors returned from the backend itself (e.g., if it failed to connect to HyperDeck)
+                    showStatusMessage(`Command failed: ${data.message}`, 'status-error');
+                    updateConnectionStatus('disconnected', 'Connection Failed');
+                    // Ensure input status is N/A on connection failure
+                    currentInputSourceSpan.textContent = 'N/A';
+                    currentInputFormatSpan.textContent = 'N/A';
+                }
+            } catch (error) {
+                showStatusMessage(`Network error: ${error.message}. Is backend server running?`, 'status-error');
+                updateConnectionStatus('disconnected', 'Server Unreachable');
+                // Ensure input status is N/A on network error
+                currentInputSourceSpan.textContent = 'N/A';
+                currentInputFormatSpan.textContent = 'N/A';
+            }
+        }
+
+        // Event Listeners
+        recordBtn.addEventListener('click', () => {
+            let command = 'record';
+            const clipName = clipNameInput.value.trim();
+            if (clipName) {
+                // Ensure the clip name is cleaned before sending to backend
+                const cleanedClipName = cleanFilename(clipName);
+                command += `: name: ${cleanedClipName}`;
+            }
+            sendHyperdeckCommand(command);
+        });
+
+        stopBtn.addEventListener('click', () => {
+            sendHyperdeckCommand('stop');
+        });
+
+        sdiInputBtn.addEventListener('click', () => {
+            showStatusMessage("Attempting to set SDI input...", "status-info");
+            sendHyperdeckCommand('configuration: video input: SDI');
+        });
+
+        // Connect Button Listener (sends 'ping' for more info gathering on backend)
+        connectBtn.addEventListener('click', () => {
+            sendHyperdeckCommand('ping', true); // 'ping' command, mark as connection check
+        });
+
+        // Disconnect Button Listener
+        disconnectBtn.addEventListener('click', async () => {
+            showStatusMessage("Sending disconnect command...", "status-info");
+            // The 'quit' command will close the HyperDeck connection, but not the Flask server.
+            await sendHyperdeckCommand('quit');
+            updateConnectionStatus('disconnected', 'Disconnected'); // Force status to disconnected
+            // Clear input status display on disconnect
+            currentInputSourceSpan.textContent = 'N/A';
+            currentInputFormatSpan.textContent = 'N/A';
+        });
+
+
+        // --- localStorage implementation ---
+        // Load IP from localStorage on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedIp = localStorage.getItem(LOCAL_STORAGE_KEY_IP);
+            if (savedIp) {
+                hyperdeckIpInput.value = savedIp;
+                showStatusMessage('Loaded HyperDeck IP from previous session. Click Connect to verify.', 'status-info');
+            } else {
+                showStatusMessage('Enter HyperDeck IP and use buttons to control.', 'status-info');
+            }
+            updateConnectionStatus('disconnected', 'Disconnected'); // Initial status on load
+            // Ensure input status is N/A on initial load
+            currentInputSourceSpan.textContent = 'N/A';
+            currentInputFormatSpan.textContent = 'N/A';
+        });
+
+        // Save IP to localStorage whenever the input changes
+        hyperdeckIpInput.addEventListener('input', () => {
+            localStorage.setItem(LOCAL_STORAGE_KEY_IP, hyperdeckIpInput.value.trim());
+            // Reset status when IP changes, as connection might be affected
+            updateConnectionStatus('disconnected', 'Disconnected');
+            currentInputSourceSpan.textContent = 'N/A';
+            currentInputFormatSpan.textContent = 'N/A';
+        });
+    </script>
+</body>
+</html>

@@ -2,6 +2,8 @@
 
 A web-based remote control application for Blackmagic Design HyperDeck devices.
 
+![Control Interface] (https://github.com/dushan90/hyperdeck-remote-control/blob/master/Screenshot.png)
+
 ## Project Summary
 
 This is a complete remote control application for Blackmagic Design HyperDeck devices that allows control over LAN. The application provides a user-friendly interface for controlling HyperDeck devices with features such as:

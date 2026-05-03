@@ -2,7 +2,7 @@
 
 A web-based remote control application for Blackmagic Design HyperDeck devices.
 
-![Control Interface] (https://github.com/dushan90/hyperdeck-remote-control/blob/master/Screenshot.png?raw=true)
+![Control Interface](/hyperdeck-remote-control/blob/master/Screenshot.png?raw=true)
 
 ## Project Summary
 
